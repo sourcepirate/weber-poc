@@ -1,0 +1,44 @@
+#!/usr/bin/python
+
+import sys
+import argparse
+import six
+from weber import Archive, update_cron_command
+
+
+class Weber(object):
+
+    def __init__(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('command', help='Subcommand to run', type=str)
+        args = parser.parse_args(sys.argv[1:2])
+        if not Archive.is_initalized():
+            Archive.commit(domains=[])
+            Archive.create_data_dir()
+            Archive.initialize()
+        self.archive = Archive.load()
+        if len(sys.argv) <= 1 or not hasattr(self, args.command):
+            parser.print_help()
+            exit(1)
+        getattr(self, args.command)()
+
+    def add(self):
+        parser = argparse.ArgumentParser(description='Adding new domain')
+        parser.add_argument('domain', help="Domain to be saved")
+        args = parser.parse_args(sys.argv[2:])
+        if not args.domain:
+            six.print_("Domain not specified")
+        else:
+            self.archive.add(args.domain)
+
+    def update(self):
+        self.archive.download()
+
+    def update_cron(self):
+        """updating cron jobs"""
+        parser = argparse.ArgumentParser(description='Adding new domain')
+        parser.add_argument("schedule", help="Schedule to be saved")
+        args = parser.parse_args(sys.argv[2:])
+        update_cron_command("/usr/local/bin/weber update > ~/.weber/weberrun.log", period=args.schedule)
+
+Weber()
